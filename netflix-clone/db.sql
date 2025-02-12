@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 12-Fev-2025 às 03:06
+-- Tempo de geração: 12-Fev-2025 às 09:49
 -- Versão do servidor: 10.4.32-MariaDB
 -- versão do PHP: 8.0.30
 
@@ -20,6 +20,30 @@ SET time_zone = "+00:00";
 --
 -- Banco de dados: `pap`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Estrutura da tabela `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` enum('user','admin') DEFAULT 'user',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Extraindo dados da tabela `users`
+--
+
+INSERT INTO `users` (`id`, `username`, `email`, `password`, `role`, `created_at`) VALUES
+(5, 'adminpimpi', 'adminpimpi@gmail.com', '$2b$10$ep4iwFqPpruRGnSEy8r7O.Rsi1XJ5cMz4hXTn72YLfT0DsyqTOT12', 'admin', '2025-02-11 22:08:43'),
+(6, 'armando', 'armando123@GMAIL.COM', '$2b$10$e3kBtyjcMSgSvajpnluN4OY9d6hB.vPnR4Fs/erLkPVd.pzy.9LHm', 'user', '2025-02-11 22:20:17'),
+(7, 'gabrielp', 'europeu.rafa@gmail.com', '$2b$10$XqSgJcvcQReR3D3pGE2hqODHF2ItrjwJDlCcnWVLrIhx9TvAZcDRy', 'user', '2025-02-12 01:22:43');
 
 -- --------------------------------------------------------
 
@@ -52,6 +76,14 @@ INSERT INTO `videos` (`id`, `title`, `description`, `country`, `league`, `is_hom
 --
 
 --
+-- Índices para tabela `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
 -- Índices para tabela `videos`
 --
 ALTER TABLE `videos`
@@ -60,6 +92,12 @@ ALTER TABLE `videos`
 --
 -- AUTO_INCREMENT de tabelas despejadas
 --
+
+--
+-- AUTO_INCREMENT de tabela `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT de tabela `videos`
