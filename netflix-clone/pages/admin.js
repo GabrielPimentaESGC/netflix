@@ -66,15 +66,57 @@ function AddVideo() {
     country: '',
     league: '',
     isHome: false,
+    isVictory: false,
     thumbnail: null,
     videoFile: null,
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Aqui você pode enviar os dados para o backend
-    console.log('Dados do vídeo:', formData);
-    alert('Vídeo adicionado com sucesso!');
+
+    // Cria um FormData para enviar arquivos
+    const formDataToSend = new FormData();
+    formDataToSend.append('title', formData.title);
+    formDataToSend.append('description', formData.description);
+    formDataToSend.append('league', formData.league);
+    formDataToSend.append('isHome', formData.isHome);
+    formDataToSend.append('isVictory', formData.isVictory);
+    formDataToSend.append('thumbnail', formData.thumbnail);
+    formDataToSend.append('videoFile', formData.videoFile);
+
+    // Adiciona o país apenas se o jogo não for em casa
+    if (!formData.isHome) {
+      formDataToSend.append('country', formData.country);
+    }
+
+    try {
+      // Envia os dados para a API
+      const response = await fetch('/api/videos', {
+        method: 'POST',
+        body: formDataToSend,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Vídeo adicionado com sucesso!');
+        setFormData({
+          title: '',
+          description: '',
+          country: '',
+          league: '',
+          isHome: false,
+          isVictory: false,
+          thumbnail: null,
+          videoFile: null,
+        });
+      } else {
+        alert(data.message || 'Erro ao adicionar vídeo.');
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar vídeo:', error);
+      alert('Erro ao conectar ao servidor.');
+    }
   };
 
   return (
@@ -109,20 +151,6 @@ function AddVideo() {
         </div>
 
         <div className="mb-4">
-          <label htmlFor="country" className="block text-sm font-medium mb-2">
-            País
-          </label>
-          <input
-            type="text"
-            id="country"
-            value={formData.country}
-            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-            className="w-full px-3 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-red-600"
-            required
-          />
-        </div>
-
-        <div className="mb-4">
           <label htmlFor="league" className="block text-sm font-medium mb-2">
             Liga
           </label>
@@ -142,13 +170,43 @@ function AddVideo() {
 
         <div className="mb-4">
           <label htmlFor="isHome" className="block text-sm font-medium mb-2">
-            Disponível em Casa?
+            Jogo em Casa?
           </label>
           <input
             type="checkbox"
             id="isHome"
             checked={formData.isHome}
             onChange={(e) => setFormData({ ...formData, isHome: e.target.checked })}
+            className="mr-2"
+          />
+          <span>Sim</span>
+        </div>
+
+        {!formData.isHome && (
+          <div className="mb-4">
+            <label htmlFor="country" className="block text-sm font-medium mb-2">
+              País
+            </label>
+            <input
+              type="text"
+              id="country"
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              className="w-full px-3 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-red-600"
+              required
+            />
+          </div>
+        )}
+
+        <div className="mb-4">
+          <label htmlFor="isVictory" className="block text-sm font-medium mb-2">
+            Vitória?
+          </label>
+          <input
+            type="checkbox"
+            id="isVictory"
+            checked={formData.isVictory}
+            onChange={(e) => setFormData({ ...formData, isVictory: e.target.checked })}
             className="mr-2"
           />
           <span>Sim</span>
@@ -191,53 +249,106 @@ function AddVideo() {
   );
 }
 
-// Componente para Gerir Vídeos
 function ManageVideos() {
-  // Simulação de lista de vídeos
-  const [videos, setVideos] = useState([
-    { id: 1, title: 'Vídeo 1', views: 100 },
-    { id: 2, title: 'Vídeo 2', views: 200 },
-  ]);
-
-  return (
-    <div className="bg-gray-800 p-6 rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">Gerir Vídeos</h2>
-      <table className="w-full">
-        <thead>
-          <tr>
-            <th className="text-left py-2">Título</th>
-            <th className="text-left py-2">Visualizações</th>
-            <th className="text-left py-2">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {videos.map((video) => (
-            <tr key={video.id} className="border-b border-gray-700">
-              <td className="py-2">{video.title}</td>
-              <td className="py-2">{video.views}</td>
-              <td className="py-2">
-                <button className="text-red-600 hover:text-red-700 transition">
-                  Editar
-                </button>
-                <button className="text-red-600 hover:text-red-700 transition ml-4">
-                  Excluir
-                </button>
-              </td>
+    const [videos, setVideos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+  
+    useEffect(() => {
+      const fetchVideos = async () => {
+        try {
+          const response = await fetch('/api/videos');
+          if (!response.ok) {
+            throw new Error(`Erro ao buscar vídeos: ${response.status} ${response.statusText}`);
+          }
+          const data = await response.json();
+          console.log('Dados recebidos da API:', data); // Depuração
+          if (Array.isArray(data)) {
+            setVideos(data);
+          } else {
+            throw new Error('Dados inválidos recebidos da API');
+          }
+        } catch (error) {
+          console.error('Erro ao buscar vídeos:', error);
+          setError(error.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      fetchVideos();
+    }, []);
+  
+    if (loading) {
+      return <div className="bg-gray-800 p-6 rounded-lg">Carregando vídeos...</div>;
+    }
+  
+    if (error) {
+      return (
+        <div className="bg-gray-800 p-6 rounded-lg text-red-500">
+          Erro: {error}
+        </div>
+      );
+    }
+  
+    return (
+      <div className="bg-gray-800 p-6 rounded-lg">
+        <h2 className="text-2xl font-bold mb-4">Gerir Vídeos</h2>
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="text-left py-2">Título</th>
+              <th className="text-left py-2">Liga</th>
+              <th className="text-left py-2">Ações</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+          </thead>
+          <tbody>
+            {videos.length > 0 ? (
+              videos.map((video) => (
+                <tr key={video.id} className="border-b border-gray-700">
+                  <td className="py-2">{video.title}</td>
+                  <td className="py-2">{video.league}</td>
+                  <td className="py-2">
+                    <button className="text-red-600 hover:text-red-700 transition">
+                      Editar
+                    </button>
+                    <button className="text-red-600 hover:text-red-700 transition ml-4">
+                      Excluir
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="3" className="py-2 text-center">
+                  Nenhum vídeo encontrado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
 // Componente para Gerir Usuários
 function ManageUsers() {
-  // Simulação de lista de usuários
-  const [users, setUsers] = useState([
-    { id: 1, username: 'user1', role: 'user' },
-    { id: 2, username: 'admin', role: 'admin' },
-  ]);
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    // Busca os usuários do banco de dados
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users');
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error('Erro ao buscar usuários:', error);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   return (
     <div className="bg-gray-800 p-6 rounded-lg">
