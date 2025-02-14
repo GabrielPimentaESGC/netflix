@@ -1,383 +1,302 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import axios from 'axios';
 
-export default function Admin() {
+export default function AdminPage() {
   const router = useRouter();
-  const [currentMenu, setCurrentMenu] = useState('addVideo');
+  const [activeTab, setActiveTab] = useState('upload');
+  const [title, setTitle] = useState('');
+  const [thumbnail, setThumbnail] = useState(null);
+  const [video, setVideo] = useState(null);
+  const [isHomeGame, setIsHomeGame] = useState(true);
+  const [country, setCountry] = useState('');
+  const [opponent, setOpponent] = useState('');
+  const [league, setLeague] = useState('Champions');
+  const [result, setResult] = useState('Vitória');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [videos, setVideos] = useState([]);
+  const [isClient, setIsClient] = useState(false); // Para garantir execução no cliente
 
-  // Verifica se o usuário está logado e é administrador
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user || user.role !== 'admin') {
-      router.push('/login'); // Redireciona para a página de login se não for admin
-    }
+    setIsClient(true); // Garante que o código só será executado no cliente
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'gerir') {
+      fetchVideos();
+    }
+  }, [activeTab]);
+
+  // Função para buscar vídeos
+  const fetchVideos = async () => {
+    try {
+      const response = await axios.get('/api/upload'); // Busca vídeos
+      setVideos(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar vídeos:', error);
+    }
+  };
+
+  // Função para excluir vídeo
+  const handleDelete = async (id) => {
+    try {
+      const response = await axios.delete(`/api/upload?id=${id}`); // Exclui vídeo
+      if (response.status === 200) {
+        alert('Vídeo excluído com sucesso!');
+        fetchVideos(); // Atualiza a lista de vídeos
+      } else {
+        alert('Erro ao excluir o vídeo.');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir vídeo:', error);
+    }
+  };
+
+  // Função para abrir o vídeo em uma nova aba
+  const openVideoPreview = (videoPath) => {
+    window.open(videoPath, '_blank');
+  };
+
+  // Função para enviar novo vídeo
+  const handleUpload = async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('thumbnail', thumbnail);
+    formData.append('video', video);
+    formData.append('isHomeGame', isHomeGame);
+    formData.append('country', country);
+    formData.append('opponent', opponent);
+    formData.append('league', league);
+    formData.append('result', result);
+
+    try {
+      const response = await axios.post('/api/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(progress);
+        },
+      });
+
+      if (response.status === 200) {
+        alert('Upload bem-sucedido!');
+        resetForm();
+        fetchVideos(); // Atualiza a lista de vídeos
+      } else {
+        alert('Erro ao enviar o vídeo.');
+      }
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      alert('Erro inesperado.');
+    }
+  };
+
+  // Função para resetar o formulário
+  const resetForm = () => {
+    setTitle('');
+    setThumbnail(null);
+    setVideo(null);
+    setIsHomeGame(true);
+    setCountry('');
+    setOpponent('');
+    setLeague('Champions');
+    setResult('Vitória');
+    setUploadProgress(0);
+  };
+
+  // Retorna null enquanto estamos no servidor
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <Head>
-        <title>Painel de Administração - Netflix Clone</title>
+        <title>Administração</title>
       </Head>
-
-      <h1 className="text-3xl font-bold mb-8">Painel de Administração</h1>
-
-      {/* Menu de Navegação */}
-      <div className="flex gap-4 mb-8">
+      <h1 className="text-3xl font-bold mb-6">Administração</h1>
+      <div className="flex space-x-4 mb-6">
         <button
-          onClick={() => setCurrentMenu('addVideo')}
-          className={`px-4 py-2 rounded ${
-            currentMenu === 'addVideo' ? 'bg-red-600' : 'bg-gray-700'
-          } hover:bg-red-700 transition`}
+          onClick={() => setActiveTab('upload')}
+          className={`px-4 py-2 rounded ${activeTab === 'upload' ? 'bg-blue-500' : 'bg-gray-700'}`}
         >
-          Adicionar Vídeo
+          Upload de Vídeo
         </button>
         <button
-          onClick={() => setCurrentMenu('manageVideos')}
-          className={`px-4 py-2 rounded ${
-            currentMenu === 'manageVideos' ? 'bg-red-600' : 'bg-gray-700'
-          } hover:bg-red-700 transition`}
+          onClick={() => setActiveTab('gerir')}
+          className={`px-4 py-2 rounded ${activeTab === 'gerir' ? 'bg-blue-500' : 'bg-gray-700'}`}
         >
           Gerir Vídeos
         </button>
-        <button
-          onClick={() => setCurrentMenu('manageUsers')}
-          className={`px-4 py-2 rounded ${
-            currentMenu === 'manageUsers' ? 'bg-red-600' : 'bg-gray-700'
-          } hover:bg-red-700 transition`}
-        >
-          Gerir Usuários
-        </button>
       </div>
 
-      {/* Conteúdo do Menu */}
-      {currentMenu === 'addVideo' && <AddVideo />}
-      {currentMenu === 'manageVideos' && <ManageVideos />}
-      {currentMenu === 'manageUsers' && <ManageUsers />}
-    </div>
-  );
-}
+      {activeTab === 'upload' && (
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold mb-4">Upload de Vídeo</h2>
+          <form onSubmit={handleUpload}>
+            <div className="mb-4">
+              <label className="block mb-1">Título</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full p-2 bg-gray-700 rounded"
+                required
+              />
+            </div>
 
-// Componente para Adicionar Vídeo
-function AddVideo() {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    country: '',
-    league: '',
-    isHome: false,
-    isVictory: false,
-    thumbnail: null,
-    videoFile: null,
-  });
+            <div className="mb-4">
+              <label className="block mb-1">Thumbnail (Imagem)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setThumbnail(e.target.files[0])}
+                className="w-full bg-gray-700 p-2 rounded"
+                required
+              />
+            </div>
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+            <div className="mb-4">
+              <label className="block mb-1">Vídeo</label>
+              <input
+                type="file"
+                accept="video/*"
+                onChange={(e) => setVideo(e.target.files[0])}
+                className="w-full bg-gray-700 p-2 rounded"
+                required
+              />
+            </div>
 
-    // Cria um FormData para enviar arquivos
-    const formDataToSend = new FormData();
-    formDataToSend.append('title', formData.title);
-    formDataToSend.append('description', formData.description);
-    formDataToSend.append('league', formData.league);
-    formDataToSend.append('isHome', formData.isHome);
-    formDataToSend.append('isVictory', formData.isVictory);
-    formDataToSend.append('thumbnail', formData.thumbnail);
-    formDataToSend.append('videoFile', formData.videoFile);
+            <div className="mb-4">
+              <label className="block mb-1">Jogo em casa?</label>
+              <select
+                value={isHomeGame}
+                onChange={(e) => setIsHomeGame(e.target.value === 'true')}
+                className="w-full bg-gray-700 p-2 rounded"
+              >
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+              </select>
+            </div>
 
-    // Adiciona o país apenas se o jogo não for em casa
-    if (!formData.isHome) {
-      formDataToSend.append('country', formData.country);
-    }
+            {!isHomeGame && (
+              <div className="mb-4">
+                <label className="block mb-1">País</label>
+                <input
+                  type="text"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="w-full p-2 bg-gray-700 rounded"
+                />
+              </div>
+            )}
 
-    try {
-      // Envia os dados para a API
-      const response = await fetch('/api/videos', {
-        method: 'POST',
-        body: formDataToSend,
-      });
+            <div className="mb-4">
+              <label className="block mb-1">Adversário</label>
+              <input
+                type="text"
+                value={opponent}
+                onChange={(e) => setOpponent(e.target.value)}
+                className="w-full p-2 bg-gray-700 rounded"
+                required
+              />
+            </div>
 
-      const data = await response.json();
+            <div className="mb-4">
+              <label className="block mb-1">Competição</label>
+              <select
+                value={league}
+                onChange={(e) => setLeague(e.target.value)}
+                className="w-full bg-gray-700 p-2 rounded"
+              >
+                <option value="Champions">Champions League</option>
+                <option value="Liga Europa">Liga Europa</option>
+                <option value="Liga Betclic">Liga Betclic</option>
+                <option value="Taça de Portugal">Taça de Portugal</option>
+              </select>
+            </div>
 
-      if (response.ok) {
-        alert('Vídeo adicionado com sucesso!');
-        setFormData({
-          title: '',
-          description: '',
-          country: '',
-          league: '',
-          isHome: false,
-          isVictory: false,
-          thumbnail: null,
-          videoFile: null,
-        });
-      } else {
-        alert(data.message || 'Erro ao adicionar vídeo.');
-      }
-    } catch (error) {
-      console.error('Erro ao adicionar vídeo:', error);
-      alert('Erro ao conectar ao servidor.');
-    }
-  };
+            <div className="mb-4">
+              <label className="block mb-1">Resultado</label>
+              <select
+                value={result}
+                onChange={(e) => setResult(e.target.value)}
+                className="w-full bg-gray-700 p-2 rounded"
+              >
+                <option value="Vitória">Vitória</option>
+                <option value="Empate">Empate</option>
+                <option value="Derrota">Derrota</option>
+              </select>
+            </div>
 
-  return (
-    <div className="bg-gray-800 p-6 rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">Adicionar Vídeo</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label htmlFor="title" className="block text-sm font-medium mb-2">
-            Título
-          </label>
-          <input
-            type="text"
-            id="title"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full px-3 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-red-600"
-            required
-          />
+            <div>
+              <label className="block text-sm font-medium mb-2">Progresso do Upload</label>
+              <div className="w-full bg-gray-700 rounded-full h-2.5">
+                <div
+                  className="bg-blue-500 h-2.5 rounded-full"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            </div>
+            <br />
+            <div className="flex flex-col">
+              <button
+                type="submit"
+                className="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600"
+              >
+                Enviar Vídeo
+              </button>
+            </div>
+          </form>
         </div>
+      )}
 
-        <div className="mb-4">
-          <label htmlFor="description" className="block text-sm font-medium mb-2">
-            Descrição
-          </label>
-          <textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full px-3 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-red-600"
-            required
-          />
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="league" className="block text-sm font-medium mb-2">
-            Liga
-          </label>
-          <select
-            id="league"
-            value={formData.league}
-            onChange={(e) => setFormData({ ...formData, league: e.target.value })}
-            className="w-full px-3 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-red-600"
-            required
-          >
-            <option value="">Selecione uma liga</option>
-            <option value="Champions">Champions</option>
-            <option value="Liga Portugal">Liga Portugal</option>
-            <option value="Premier League">Premier League</option>
-          </select>
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="isHome" className="block text-sm font-medium mb-2">
-            Jogo em Casa?
-          </label>
-          <input
-            type="checkbox"
-            id="isHome"
-            checked={formData.isHome}
-            onChange={(e) => setFormData({ ...formData, isHome: e.target.checked })}
-            className="mr-2"
-          />
-          <span>Sim</span>
-        </div>
-
-        {!formData.isHome && (
-          <div className="mb-4">
-            <label htmlFor="country" className="block text-sm font-medium mb-2">
-              País
-            </label>
-            <input
-              type="text"
-              id="country"
-              value={formData.country}
-              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-              className="w-full px-3 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-red-600"
-              required
-            />
-          </div>
-        )}
-
-        <div className="mb-4">
-          <label htmlFor="isVictory" className="block text-sm font-medium mb-2">
-            Vitória?
-          </label>
-          <input
-            type="checkbox"
-            id="isVictory"
-            checked={formData.isVictory}
-            onChange={(e) => setFormData({ ...formData, isVictory: e.target.checked })}
-            className="mr-2"
-          />
-          <span>Sim</span>
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="thumbnail" className="block text-sm font-medium mb-2">
-            Thumbnail
-          </label>
-          <input
-            type="file"
-            id="thumbnail"
-            onChange={(e) => setFormData({ ...formData, thumbnail: e.target.files[0] })}
-            className="w-full px-3 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-red-600"
-            required
-          />
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="videoFile" className="block text-sm font-medium mb-2">
-            Vídeo
-          </label>
-          <input
-            type="file"
-            id="videoFile"
-            onChange={(e) => setFormData({ ...formData, videoFile: e.target.files[0] })}
-            className="w-full px-3 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-red-600"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
-        >
-          Adicionar Vídeo
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function ManageVideos() {
-    const [videos, setVideos] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-  
-    useEffect(() => {
-      const fetchVideos = async () => {
-        try {
-          const response = await fetch('/api/videos');
-          if (!response.ok) {
-            throw new Error(`Erro ao buscar vídeos: ${response.status} ${response.statusText}`);
-          }
-          const data = await response.json();
-          console.log('Dados recebidos da API:', data); // Depuração
-          if (Array.isArray(data)) {
-            setVideos(data);
-          } else {
-            throw new Error('Dados inválidos recebidos da API');
-          }
-        } catch (error) {
-          console.error('Erro ao buscar vídeos:', error);
-          setError(error.message);
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-      fetchVideos();
-    }, []);
-  
-    if (loading) {
-      return <div className="bg-gray-800 p-6 rounded-lg">Carregando vídeos...</div>;
-    }
-  
-    if (error) {
-      return (
-        <div className="bg-gray-800 p-6 rounded-lg text-red-500">
-          Erro: {error}
-        </div>
-      );
-    }
-  
-    return (
-      <div className="bg-gray-800 p-6 rounded-lg">
-        <h2 className="text-2xl font-bold mb-4">Gerir Vídeos</h2>
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="text-left py-2">Título</th>
-              <th className="text-left py-2">Liga</th>
-              <th className="text-left py-2">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {videos.length > 0 ? (
-              videos.map((video) => (
-                <tr key={video.id} className="border-b border-gray-700">
-                  <td className="py-2">{video.title}</td>
-                  <td className="py-2">{video.league}</td>
-                  <td className="py-2">
-                    <button className="text-red-600 hover:text-red-700 transition">
-                      Editar
-                    </button>
-                    <button className="text-red-600 hover:text-red-700 transition ml-4">
+      {activeTab === 'gerir' && (
+        <div className="bg-gray-800 p-4 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold mb-4">Gerir Vídeos</h2>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-700">
+                <th className="p-2">Preview</th>
+                <th className="p-2">Nome</th>
+                <th className="p-2">Detalhes</th>
+                <th className="p-2">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {videos.map((video) => (
+                <tr key={video.id} className="border-t border-gray-600">
+                  <td className="p-2">
+                    <img
+                      src={video.thumbnail_path}
+                      alt={video.title}
+                      className="w-24 h-16 object-cover cursor-pointer rounded-lg hover:opacity-80 transition"
+                      onClick={() => openVideoPreview(video.video_path)}
+                    />
+                  </td>
+                  <td className="p-2">{video.title}</td>
+                  <td className="p-2 text-gray-400">
+                    {video.league} - {video.opponent} ({video.result})
+                  </td>
+                  <td className="p-2">
+                    <button
+                      onClick={() => handleDelete(video.id)}
+                      className="bg-red-500 px-3 py-1 rounded hover:bg-red-600"
+                    >
                       Excluir
                     </button>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="3" className="py-2 text-center">
-                  Nenhum vídeo encontrado.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-// Componente para Gerir Usuários
-function ManageUsers() {
-  const [users, setUsers] = useState([]);
-
-  useEffect(() => {
-    // Busca os usuários do banco de dados
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch('/api/users');
-        const data = await response.json();
-        setUsers(data);
-      } catch (error) {
-        console.error('Erro ao buscar usuários:', error);
-      }
-    };
-
-    fetchUsers();
-  }, []);
-
-  return (
-    <div className="bg-gray-800 p-6 rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">Gerir Usuários</h2>
-      <table className="w-full">
-        <thead>
-          <tr>
-            <th className="text-left py-2">Username</th>
-            <th className="text-left py-2">Cargo</th>
-            <th className="text-left py-2">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id} className="border-b border-gray-700">
-              <td className="py-2">{user.username}</td>
-              <td className="py-2">{user.role}</td>
-              <td className="py-2">
-                <button className="text-red-600 hover:text-red-700 transition">
-                  Editar
-                </button>
-                <button className="text-red-600 hover:text-red-700 transition ml-4">
-                  Excluir
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

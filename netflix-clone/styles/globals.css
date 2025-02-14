@@ -1,3 +1,66 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(-20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes pop {
+    0% {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 1s ease-in-out;
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.5s ease-in-out;
+  }
+  
+  .animate-text-pop {
+    animation: pop 0.6s ease-in-out;
+  }
+  
+  .animate-card-pop {
+    animation: pop 0.5s ease-in-out;
+  }
+  
+  .animate-pulse {
+    animation: pulse 1.5s infinite;
+  }
